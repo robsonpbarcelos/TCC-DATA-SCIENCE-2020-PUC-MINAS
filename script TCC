@@ -1,0 +1,80 @@
+#instalando bibliotecas
+install.packages("rpart.plot")
+install.packages("e1071")
+install.packages("aod")
+install.packages("GGally")
+install.packages("gmodels")
+install.packages("Rcpp")
+install.packages("ggplot2")
+install.packages("rpart")
+install.packages("ROCR")
+
+#carregando bibliotecas
+
+library("e1071") #Functions for latent class analysis
+library("aod") #Provides a set of functions to analyse overdispersed counts or proportions.
+library("ggplot2") # is a system for declaratively creating graphics, based on The Grammar of Graphics.
+library("GGally") #GGally extends ggplot2 by adding several functions to reduce the complexity of combining geoms with transformed data.
+library("gmodels") #Various R programming tools for model fitting.
+library("Rcpp") #The Rcpp package integrates R and C++ via R functions and a (header-only) C++ library.
+library("rpart") #The rpart code builds classification or regression models of a very general structure using a two stage procedure.
+library("rpart.plot") #model, automatically tailoring the plot for the model's response type.
+library("ROCR") #is a flexible tool for creating cutoff-parameterized 2D performance curves by freely combining two from over 25 performance measures
+
+#carrega dados
+
+data<-read.table("C:/Users/ROBSON BARCELOS/Downloads/parkinsonsdata4.csv",header=TRUE, sep=";")
+summary(data) #resumo dos dados
+str(data) #verifica estrutura de dados
+table(data$status) 
+data$status = factor(data$status) # tranforma status em categórico
+sample=sample(756,356,replace = FALSE) #função aleatória
+training=data[sample,] #cria banco de dados treino
+test=data[-sample,] #cria banco de dos de teste
+training_labels=data[sample,]$status
+test_labels=data[-sample,]$status
+table(training$status)
+table(test$status)
+
+
+#aplica Naïve Bayes
+parkinson_classifier=naiveBayes(training,training_labels)
+parkinson_classifier
+test_pred=predict(parkinson_classifier,test)
+test_pred
+CrossTable(test_pred,test_labels,prop.chisq = FALSE, prop.t = FALSE, 
+           prop.r = FALSE, dnn = c('predicted', 'actual'))
+
+#tentativa de melhoria com filtro Laplace
+parkinson_classifier2=naiveBayes(training,training_labels,laplace = 1)
+parkinson_test_pred2=predict(parkinson_classifier2,test)
+parkinson_test_pred2
+CrossTable(parkinson_test_pred2,test_labels,prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE, dnn = c('predicted', 'actual'))
+
+
+#aplica SVM
+x <- subset(data, select = -status)
+y <- data$status
+model <- svm(x, y, probability = TRUE)
+print(model)
+summary(model)
+pred <- predict(model, x)
+pred
+cm<-table(pred = pred, true = y)
+cm
+
+
+#aplica árvore de decisão
+set.seed(9850)
+g<-runif(nrow(data))
+datar<-data[order(g),]
+target = status ~ .
+m3<-rpart(target, data=data)
+rpart.plot(m3)
+
+#tentativa de melhorar o gráfico podando a arvore
+summary(m3)
+printcp(m3)
+plotcp(m3)
+rpart.plot(prune(m3, cp = 0.012500), cex = 0.65)
+rpart.plot(prune(m3, cp = 0.029167), cex = 0.65)
